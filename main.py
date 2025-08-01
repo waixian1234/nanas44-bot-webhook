@@ -30,10 +30,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if user_id not in lines:
             f.write(f"{user_id}\n")
             save_log("new_users.txt", f"{datetime.datetime.now()} - {user_id}")
-    welcome_text = f"👋 HI {first_name}！\n\n🪜 Step 1:\nJoin Nanas44 Official Channel Claim Free 🎁\n\n🪜 Step 2:\nJoin Grouplink IOI Partnership Ambil E-wallet Angpaw 💸"
+    welcome_text = (
+        f"👋 HI {first_name}！\n\n"
+        "🪜 Step 1:\nJoin Nanas44 Official Channel Claim Free 🎁\n\n"
+        "🪜 Step 2:\nJoin Grouplink IOI Partnership Ambil E‑wallet Angpaw 💸"
+    )
     keyboard = [
         [InlineKeyboardButton("NANAS44 OFFICIAL CHANNEL", url="https://t.me/nanas44")],
-        [InlineKeyboardButton("E-WALLET ANGPAO GROUP", url="https://t.me/addlist/XsWuNiUNHG05ZDg1")]
+        [InlineKeyboardButton("E‑WALLET ANGPAO GROUP", url="https://t.me/addlist/XsWuNiUNHG05ZDg1")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     with open("banner-01.png", "rb") as img:
@@ -97,7 +101,7 @@ async def forward_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ids = list(set(f.read().splitlines()))
         for uid in ids:
             try:
-                await update.message.copy(chat_id=int(uid))
+                await context.bot.send_message(chat_id=int(uid), text=update.message.text)
                 time.sleep(DELAY)
             except:
                 continue
@@ -106,8 +110,8 @@ async def subcount(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id not in ADMIN_IDS:
         return
     with open(SUBSCRIBER_FILE, "r") as f:
-        ids = set(f.read().splitlines())
-    await update.message.reply_text(f"👥 Total subscribers: {len(ids)}")
+        total = len(set(f.read().splitlines()))
+    await update.message.reply_text(f"👥 Total subscribers: {total}")
 
 async def export(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id not in ADMIN_IDS:
@@ -123,7 +127,15 @@ async def restart(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id not in ADMIN_IDS:
         return
-    text = "🧠 Bot Commands:\n/start - Welcome page\n/broadcast <text> - Send message to all\n/photo + caption - Broadcast image\n/subcount - Subscriber count\n/export - Send subscribers.txt\n/restart - Restart bot"
+    text = (
+        "🧠 Bot Commands:\n"
+        "/start - Welcome page\n"
+        "/broadcast <text> - Send message to all\n"
+        "/photo + caption - Broadcast image\n"
+        "/subcount - Subscriber count\n"
+        "/export - Download subscribers list\n"
+        "/restart - Restart bot"
+    )
     await update.message.reply_text(text)
 
 def backup_task():
