@@ -216,7 +216,7 @@ if __name__ == "__main__":
         name="daily_backup",
     )
 
-    BASE_URL = os.environ.get("RENDER_EXTERNAL_URL", "https://www.nanas44.com")
+    BASE_URL = os.environ["RENDER_EXTERNAL_URL"]
     URL_PATH = f"/webhook/{TOKEN.split(':')[0]}"
 
     application.run_webhook(
