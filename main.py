@@ -61,7 +61,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 reply_markup=reply_markup,
             )
     except FileNotFoundError:
-        await update.message.reply_text(welcome_text, reply_markup=reply_markup)
+        if update.message:
+            await update.message.reply_text(welcome_text, reply_markup=reply_markup)
 
 async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id not in ADMIN_IDS:
@@ -112,11 +113,17 @@ async def broadcast_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(f"Photo broadcast sent to {success} users.")
 
+# ✅ 核心：只在“管理员转发来的消息”时群发真正的转发；非转发消息直接忽略，不会群发第二条
 async def forward_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id not in ADMIN_IDS:
         return
     if not update.message:
         return
+
+    # 只处理“转发来的消息”（来自频道/其他聊天），不是转发就不群发
+    if not update.message.forward_from_chat:
+        return
+
     if not os.path.exists(SUBSCRIBER_FILE):
         await update.message.reply_text("No subscribers yet.")
         return
@@ -124,51 +131,28 @@ async def forward_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
     with open(SUBSCRIBER_FILE, "r", encoding="utf-8") as f:
         ids = list(set(f.read().splitlines()))
 
-    if update.message.forward_from_chat:
-        from_chat_id = update.message.forward_from_chat.id
-        forward_message_id = update.message.forward_from_message_id
-        success = 0
-        for uid in ids:
-            try:
-                await context.bot.forward_message(
-                    chat_id=int(uid),
-                    from_chat_id=from_chat_id,
-                    message_id=forward_message_id,
-                )
-                success += 1
-                await asyncio.sleep(DELAY)
-            except Exception as e:
-                logger.warning(f"Forward to {uid} failed: {e}")
-        await update.message.reply_text(f"✅ Forwarded with channel source to {success} users.")
-    else:
-        for uid in ids:
-            try:
-                await context.bot.send_message(chat_id=int(uid), text=update.message.text or "")
-                await asyncio.sleep(DELAY)
-            except Exception as e:
-                logger.warning(f"Text relay to {uid} failed: {e}")
-
-# 🔥 新增：监听频道贴子并自动转发给订阅者
-async def channel_post_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not os.path.exists(SUBSCRIBER_FILE):
-        return
-    with open(SUBSCRIBER_FILE, "r", encoding="utf-8") as f:
-        ids = list(set(f.read().splitlines()))
+    from_chat_id = update.message.forward_from_chat.id
+    forward_message_id = update.message.forward_from_message_id
 
     success = 0
     for uid in ids:
         try:
             await context.bot.forward_message(
                 chat_id=int(uid),
-                from_chat_id=update.channel_post.chat_id,
-                message_id=update.channel_post.message_id,
+                from_chat_id=from_chat_id,
+                message_id=forward_message_id,
             )
             success += 1
             await asyncio.sleep(DELAY)
         except Exception as e:
-            logger.warning(f"Forward channel post to {uid} failed: {e}")
+            logger.warning(f"Forward to {uid} failed: {e}")
 
-    logger.info(f"Forwarded channel post to {success} subscribers.")
+    await update.message.reply_text(f"✅ Forwarded to {success} users.")
+
+# ❌ 取消“自动监听频道贴子并群发”的功能，避免重复或误触发
+# （如需恢复自动功能，可使用 ChatType.CHANNEL 监听或 ChannelPostHandler）
+# async def channel_post_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+#     ...
 
 async def subcount(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id not in ADMIN_IDS:
@@ -229,9 +213,12 @@ if __name__ == "__main__":
     application.add_handler(CommandHandler("export", export))
     application.add_handler(CommandHandler("restart", restart))
     application.add_handler(CommandHandler("help", help_cmd))
-    application.add_handler(MessageHandler(filters.PHOTO & filters.User(ADMIN_IDS), broadcast_photo))
+
+    # 仅当管理员“转发”消息到 Bot 时触发群发（保留 Forwarded from）
     application.add_handler(MessageHandler(filters.FORWARDED & filters.User(ADMIN_IDS), forward_broadcast))
-    application.add_handler(MessageHandler(filters.UpdateType.CHANNEL_POST, channel_post_handler))  # 🔥 新增行
+
+    # ❌ 不再监听频道自动推送
+    # application.add_handler(MessageHandler(filters.ChatType.CHANNEL, channel_post_handler))
 
     application.job_queue.run_daily(
         send_backup,
