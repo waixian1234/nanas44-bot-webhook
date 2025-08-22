@@ -14,7 +14,7 @@ from telegram.ext import (
 )
 
 TOKEN = '8235876145:AAH9xfHaogajtOwzuV02iyfMNoRG2l2E4do'
-ADMIN_IDS = [1840751528, 1280460690]
+ADMIN_IDS = [1840751528, 1280460690, 1873662628]
 SUBSCRIBER_FILE = "subscribers.txt"
 LOG_DIR = "logs"
 DELAY = 1.1
