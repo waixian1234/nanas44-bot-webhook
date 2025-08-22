@@ -148,6 +148,28 @@ async def forward_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
             except Exception as e:
                 logger.warning(f"Text relay to {uid} failed: {e}")
 
+# 🔥 新增：监听频道贴子并自动转发给订阅者
+async def channel_post_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not os.path.exists(SUBSCRIBER_FILE):
+        return
+    with open(SUBSCRIBER_FILE, "r", encoding="utf-8") as f:
+        ids = list(set(f.read().splitlines()))
+
+    success = 0
+    for uid in ids:
+        try:
+            await context.bot.forward_message(
+                chat_id=int(uid),
+                from_chat_id=update.channel_post.chat_id,
+                message_id=update.channel_post.message_id,
+            )
+            success += 1
+            await asyncio.sleep(DELAY)
+        except Exception as e:
+            logger.warning(f"Forward channel post to {uid} failed: {e}")
+
+    logger.info(f"Forwarded channel post to {success} subscribers.")
+
 async def subcount(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id not in ADMIN_IDS:
         return
@@ -209,6 +231,7 @@ if __name__ == "__main__":
     application.add_handler(CommandHandler("help", help_cmd))
     application.add_handler(MessageHandler(filters.PHOTO & filters.User(ADMIN_IDS), broadcast_photo))
     application.add_handler(MessageHandler(filters.FORWARDED & filters.User(ADMIN_IDS), forward_broadcast))
+    application.add_handler(MessageHandler(filters.UpdateType.CHANNEL_POST, channel_post_handler))  # 🔥 新增行
 
     application.job_queue.run_daily(
         send_backup,
