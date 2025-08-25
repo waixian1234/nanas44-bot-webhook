@@ -13,7 +13,7 @@ from telegram.ext import (
     filters,
 )
 
-TOKEN = '8235876145:AAH9xfHaogajtOwzuV02iyfMNoRG2l2E4do'
+TOKEN = '8235876145:AAHL_nZ9HG0jawwrUg50o0ZNsTL4B5MeEnc'
 ADMIN_IDS = [1840751528, 1280460690, 1873662628]
 SUBSCRIBER_FILE = "subscribers.txt"
 LOG_DIR = "logs"
